@@ -1,9 +1,16 @@
+import enum
 from unittest import TestCase
 
 import typing
 
 from uglyduck.inspector import TypeInspector
 from uglyduck.parse import str_to_type
+
+
+class TestEnum(enum.Enum):
+    FOO = 0
+    BAR = 1
+    BAZ = 2
 
 
 class Test:
@@ -14,15 +21,20 @@ class Test:
     str_with_type: str = 'a'
     str_without_type = 'b'
 
-    def __init__(self, a: int, b: 'Test'):
+    def __init__(self, a: int, b: 'Test', c=TestEnum.BAR, *args: [str], **kwargs: dict):
         self.a = a
         self.b = b
+        self.c = c
 
 
 class TestInspect(TestCase):
+    def setUp(self) -> None:
+        TypeInspector.make_package_types_file('uglyduck', modules=['tests'])
+
     def test_types(self):
         TypeInspector.make_package_types_file('uglyduck', modules=['tests'])
         from uglyduck import types
+
         annotations = types.ITest.__annotations__
         self.assertEqual(
             annotations['bool_with_type'],
