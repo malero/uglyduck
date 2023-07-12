@@ -411,8 +411,36 @@ class TypeInspector:
                 list_type = self.get_type_name(t[0])
                 type_name = f'typing.List[{list_type}]'
         elif isinstance(t, dict):
-            items = ', '.join([self.get_type_name(item) for item in t])
-            type_name = f'typing.Dict[{items}]'
+            key_types = []
+            value_types = []
+            for d_key, d_val in t.items():
+                key_type = self.get_type_name(d_key)
+                value_type = self.get_type_name(d_val)
+
+                if key_type not in key_types:
+                    key_types.append(key_type)
+
+                if value_type not in value_types:
+                    value_types.append(value_type)
+
+            if len(key_types) > 1:
+                key_type = f"typing.Union[{', '.join(key_types)}]"
+            elif len(key_types) == 1:
+                key_type = key_types[0]
+            else:
+                key_type = None
+
+            if len(value_types) > 1:
+                value_type = f"typing.Union[{', '.join(value_types)}]"
+            elif len(value_types) == 1:
+                value_type = value_types[0]
+            else:
+                value_type = None
+
+            if key_type is None or value_type is None:
+                type_name = 'typing.Dict'
+            else:
+                type_name = f'typing.Dict[{key_type}, {value_type}]'
         elif isinstance(t, (int, float, bool, str)):
             if isinstance(t, str) and str(t) in self.current_module.__dict__ or str(t) in self.classes:
                 if self.is_interface_method_name(t):
