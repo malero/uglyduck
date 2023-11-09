@@ -5,7 +5,6 @@ import sys
 import types
 
 import typing
-from collections import OrderedDict
 
 from uglyduck import parse, utils, analyzer
 
@@ -173,7 +172,7 @@ class TypeInspectorClass:
             self.annotations = {}
 
         self.find_parents()
-        self.process_members()
+        # self.process_members()
 
     def __str__(self):
         parent_classes = ', '.join(reversed(self.parents))
@@ -372,7 +371,7 @@ class TypeInspector:
                 default = f"'{default}'"
         return type_name, self.get_default(default)
 
-    def get_type_name(self, t):
+    def get_type_name(self, t, print_stuff=False):
         _type = type(t)
 
         if analyzer.get_type_module(_type) == 'types' and isinstance(t, types.GenericAlias):
@@ -442,11 +441,8 @@ class TypeInspector:
             else:
                 type_name = f'typing.Dict[{key_type}, {value_type}]'
         elif isinstance(t, (int, float, bool, str)):
-            if isinstance(t, str) and str(t) in self.current_module.__dict__ or str(t) in self.classes:
-                if self.is_interface_method_name(t):
-                    type_name = f"'{t}'"
-                else:
-                    type_name = f"'I{t}'"
+            if isinstance(t, str):
+                type_name = self.make_interface_type_name(t, print_stuff)
             else:
                 type_name = type(t).__name__
         else:
@@ -470,13 +466,29 @@ class TypeInspector:
                 cls = t.__class__
                 if cls.__module__ != 'builtins':
                     self.add_import(cls.__module__, cls.__name__)
-                type_name = str(cls.__name__)
+                type_name = self.make_interface_type_name(t, print_stuff)
 
         if type_name in [
             'NoneType',
             '_empty',
         ]:
             type_name = 'typing.Any'
+
+        return type_name
+
+    def make_interface_type_name(self, t, print_stuff=False):
+        if isinstance(t, str):
+            str_t = t
+        else:
+            str_t = t.__class__.__name__
+
+        if str_t in self.current_module.__dict__ or str_t in self.classes:
+            if self.is_interface_method_name(str_t):
+                type_name = f"'{str_t}'"
+            else:
+                type_name = f"'I{str_t}'"
+        else:
+            type_name = str(t.__class__.__name__)
 
         return type_name
 
@@ -487,6 +499,7 @@ class TypeInspector:
         cls_inspector = TypeInspectorClass(self, cls)
         self.classes[cls.__name__] = cls_inspector
         add_inspector_class_map(cls_inspector)
+        cls_inspector.process_members()
 
     def make_protocol_function(self, func, indent=4):
         self.functions[func.__name__] = TypeInspectorFunction.from_function(self,func, indent=indent)
