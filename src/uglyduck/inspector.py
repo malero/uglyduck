@@ -13,6 +13,11 @@ NO_DEFAULT = utils.NO_DEFAULT
 CLASS_MAP = {}
 INSPECTOR_CLASS_MAP = {}
 
+def remove_duplicates(seq):
+    seen = set()
+    seen_add = seen.add
+    return [x for x in seq if not (x in seen or seen_add(x))]
+
 
 def build_cls_path(cls):
     return f'{cls.__module__}.{cls.__name__}'
@@ -398,7 +403,7 @@ class TypeInspector:
         elif isinstance(t, types.FunctionType):
             type_name = self.get_type_name(t.__annotations__.get('return', typing.Any))
         elif isinstance(t, tuple):
-            items = ', '.join([self.get_type_name(item) for item in t])
+            items = ', '.join(remove_duplicates([self.get_type_name(item) for item in t]))
             type_name = f'typing.Tuple[{items}]'
         elif _type in [
             list,
@@ -423,6 +428,7 @@ class TypeInspector:
                     value_types.append(value_type)
 
             if len(key_types) > 1:
+                key_types = sorted(remove_duplicates(key_types))
                 key_type = f"typing.Union[{', '.join(key_types)}]"
             elif len(key_types) == 1:
                 key_type = key_types[0]
@@ -430,6 +436,7 @@ class TypeInspector:
                 key_type = None
 
             if len(value_types) > 1:
+                value_types = sorted(remove_duplicates(value_types))
                 value_type = f"typing.Union[{', '.join(value_types)}]"
             elif len(value_types) == 1:
                 value_type = value_types[0]
